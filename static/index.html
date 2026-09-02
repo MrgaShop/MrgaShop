@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mrgashop — Թարմ միրգ</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f6faf6;color:#17321d}
+.wrap{max-width:900px;margin:auto;padding:20px}
+.hero{background:#dff2df;padding:35px;border-radius:20px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px}
+.card,.form{background:white;padding:18px;border-radius:15px;margin-top:15px;border:1px solid #ddd}
+.e{text-align:center;font-size:50px}
+button{padding:11px;border:0;border-radius:9px;background:#2f7d3b;color:white;cursor:pointer}
+.add{width:100%}
+input,textarea{width:100%;padding:11px;margin:6px 0;box-sizing:border-box;border:1px solid #ddd;border-radius:8px}
+.send{width:100%;margin-top:8px}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="hero">
+<h1>🍎 Mrgashop</h1>
+<p>Թարմ միրգ՝ ձեր տուն</p>
+</div>
+
+<h2>Մրգեր</h2>
+<div class="grid" id="products"></div>
+
+<div class="form">
+<h2>🛒 Պատվեր</h2>
+
+<div id="items">Զամբյուղը դատարկ է։</div>
+
+<h3>
+Ընդամենը՝ <span id="total">0</span> ֏
+</h3>
+
+<input id="name" placeholder="Անուն ազգանուն">
+<input id="phone" placeholder="Հեռախոսահամար">
+<textarea id="address" rows="3" placeholder="Առաքման հասցե"></textarea>
+
+<button class="send" onclick="sendOrder()">
+Ուղարկել պատվերը
+</button>
+
+<p id="message"></p>
+
+</div>
+</div>
+
+<script>
+
+const products = [
+["🍎","Խնձոր",800],
+["🍌","Բանան",1200],
+["🍊","Նարինջ",1000],
+["🍇","Խաղող",1500],
+["🍑","Դեղձ",1300],
+["🍐","Տանձ",1100]
+];
+
+let cart = [];
+
+document.getElementById("products").innerHTML =
+products.map((p,i)=>`
+<div class="card">
+<div class="e">${p[0]}</div>
+<h3>${p[1]}</h3>
+<p>${p[2].toLocaleString()} ֏ / կգ</p>
+<button class="add" onclick="addToCart(${i})">
+Ավելացնել զամբյուղ
+</button>
+</div>
+`).join("");
+
+function addToCart(i){
+cart.push({
+name:products[i][1],
+price:products[i][2]
+});
+render();
+}
+
+function render(){
+
+document.getElementById("items").innerHTML =
+cart.length
+?
+cart.map((x,i)=>`
+<p>
+• ${x.name} — ${x.price.toLocaleString()} ֏
+<button onclick="removeItem(${i})">✕</button>
+</p>
+`).join("")
+:
+"Զամբյուղը դատարկ է։";
+
+document.getElementById("total").textContent =
+cart.reduce((sum,x)=>sum+x.price,0).toLocaleString();
+}
+
+function removeItem(i){
+cart.splice(i,1);
+render();
+}
+
+async function sendOrder(){
+
+const name=document.getElementById("name").value.trim();
+const phone=document.getElementById("phone").value.trim();
+const address=document.getElementById("address").value.trim();
+const message=document.getElementById("message");
+
+if(!cart.length){
+message.textContent="Ավելացրու ապրանք։";
+return;
+}
+
+if(!name || !phone || !address){
+message.textContent="Լրացրու անունը, հեռախոսը և հասցեն։";
+return;
+}
+
+message.textContent="Ուղարկվում է…";
+
+try{
+
+const response=await fetch("/api/orders",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+name:name,
+phone:phone,
+address:address,
+items:cart
+})
+});
+
+const data=await response.json();
+
+if(data.ok){
+
+message.textContent=
+"✅ Պատվերը ընդունվեց։ Պատվեր #"+data.order_id;
+
+cart=[];
+render();
+
+}else{
+
+message.textContent="❌ "+data.error;
+
+}
+
+}catch(error){
+
+message.textContent=
+"❌ Սերվերի հետ կապ չկա։";
+
+}
+
+}
+
+render();
+
+</script>
+
+</body>
+</html>
